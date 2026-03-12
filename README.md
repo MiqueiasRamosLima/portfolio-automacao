@@ -69,4 +69,4 @@ portfolio-automacao/
 
 ---
 
-*Disponível para oportunidades presenciais em Brasília, DF.*
+*Disponível para oportunidades presenciais em Brasília, DF e remota em todo país.*
