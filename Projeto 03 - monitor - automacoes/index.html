@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Automações — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+@media (max-width: 700px) { .layout { grid-template-columns: 1fr; } }
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-name { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
+.logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.nav { padding: 16px 0; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: var(--surface2); }
+.nav-item.active { color: var(--text); border-left-color: var(--green); background: rgba(63,185,80,0.05); }
+.nav-icon { font-size: 15px; }
+
+.status-bar {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.status-dot-row { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.status-text { font-family: var(--mono); font-size: 11px; color: var(--green); }
+
+/* MAIN */
+.main { padding: 28px 32px; overflow-y: auto; }
+@media (max-width: 700px) { .main { padding: 20px 16px; } }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.page-title { font-size: 20px; font-weight: 700; }
+.time-badge {
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 12px; border-radius: 6px;
+  border: 1px solid var(--border); color: var(--muted);
+  background: var(--surface);
+}
+
+/* STAT CARDS */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+@media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .stats { grid-template-columns: 1fr 1fr; } }
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.stat-value { font-family: var(--mono); font-size: 28px; font-weight: 600; line-height: 1; }
+.stat-value.green { color: var(--green); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-value.red { color: var(--red); }
+.stat-value.blue { color: var(--blue); }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+/* CHART AREA */
+.chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 28px; }
+@media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.panel-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 500; }
+.panel-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.panel-body { padding: 18px; }
+
+/* MINI CHART */
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+.bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: height 0.5s ease;
+}
+.bar.success { background: var(--green); opacity: 0.8; }
+.bar.error { background: var(--red); opacity: 0.8; }
+.bar-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+
+/* DONUT */
+.donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.donut-svg { display: block; }
+.donut-legend { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.legend-row { display: flex; align-items: center; justify-content: space-between; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-label { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.legend-val { font-family: var(--mono); font-size: 11px; color: var(--text); font-weight: 500; }
+
+/* LOG TABLE */
+.log-table { width: 100%; border-collapse: collapse; }
+.log-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.log-table td {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+  vertical-align: middle;
+  color: var(--text);
+}
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.badge-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; padding: 3px 8px; border-radius: 4px;
+  font-weight: 500; letter-spacing: 0.5px;
+}
+.badge-ok { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.25); }
+.badge-err { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.25); }
+.badge-warn { background: rgba(210,153,34,0.12); color: var(--yellow); border: 1px solid rgba(210,153,34,0.25); }
+
+.flow-name { color: var(--blue); }
+.duration { color: var(--purple); }
+
+/* REFRESH BTN */
+.refresh-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.refresh-btn:hover { border-color: var(--green); color: var(--green); }
+
+.alert-banner {
+  background: rgba(248,81,73,0.08);
+  border: 1px solid rgba(248,81,73,0.25);
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.alert-icon { font-size: 16px; }
+.alert-text { font-family: var(--mono); font-size: 12px; color: var(--red); }
+
+.uptime-row { display: flex; gap: 3px; margin-top: 8px; }
+.uptime-block {
+  width: 12px; height: 24px; border-radius: 2px;
+  background: var(--green);
+  opacity: 0.7;
+}
+.uptime-block.down { background: var(--red); opacity: 0.8; }
+.uptime-block.warn { background: var(--yellow); opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-name">AutoMonitor</div>
+      <div class="logo-sub">by Miquéias Lima</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active"><span class="nav-icon">⬡</span> Dashboard</div>
+      <div class="nav-item"><span class="nav-icon">↻</span> Fluxos</div>
+      <div class="nav-item"><span class="nav-icon">⚠</span> Alertas</div>
+      <div class="nav-item"><span class="nav-icon">📋</span> Logs</div>
+      <div class="nav-item"><span class="nav-icon">⚙</span> Config</div>
+    </nav>
+    <div class="status-bar">
+      <div class="status-dot-row">
+        <div class="status-dot"></div>
+        <span class="status-text">Sistema operacional</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title">Monitor de Automações</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="refresh-btn" onclick="refreshData()">↻ Atualizar</button>
+        <div class="time-badge" id="currentTime">--:--:--</div>
+      </div>
+    </div>
+
+    <!-- ALERT -->
+    <div class="alert-banner" id="alertBanner" style="display:none">
+      <span class="alert-icon">⚠</span>
+      <span class="alert-text" id="alertText">—</span>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Execuções hoje</div>
+        <div class="stat-value blue" id="statTotal">—</div>
+        <div class="stat-sub" id="statTotalSub">carregando...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sucesso</div>
+        <div class="stat-value green" id="statOk">—</div>
+        <div class="stat-sub" id="statOkSub">carregando...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Erros</div>
+        <div class="stat-value red" id="statErr">—</div>
+        <div class="stat-sub" id="statErrSub">carregando...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tempo médio</div>
+        <div class="stat-value yellow" id="statTime">—</div>
+        <div class="stat-sub">ms por execução</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Execuções por hora</span>
+          <span class="panel-sub">últimas 8h</span>
+        </div>
+        <div class="panel-body">
+          <div class="bar-chart" id="barChart"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Por fluxo</span>
+          <span class="panel-sub">distribuição</span>
+        </div>
+        <div class="panel-body">
+          <div class="donut-wrap">
+            <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="45" fill="none" stroke="#21262d" stroke-width="18"/>
+              <circle id="d1" cx="60" cy="60" r="45" fill="none" stroke="#3fb950" stroke-width="18" stroke-dasharray="113 170" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+              <circle id="d2" cx="60" cy="60" r="45" fill="none" stroke="#58a6ff" stroke-width="18" stroke-dasharray="85 198" stroke-dashoffset="-113" transform="rotate(-90 60 60)"/>
+              <circle id="d3" cx="60" cy="60" r="45" fill="none" stroke="#bc8cff" stroke-width="18" stroke-dasharray="57 226" stroke-dashoffset="-198" transform="rotate(-90 60 60)"/>
+              <text x="60" y="64" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" font-weight="600" fill="#c9d1d9" id="donutCenter">—</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-row">
+                <span class="legend-label"><span class="legend-dot" style="background:var(--green)"></span>Lead Qualif.</span>
+                <span class="legend-val" id="l1">—</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-label"><span class="legend-dot" style="background:var(--blue)"></span>Conteúdo</span>
+                <span class="legend-val" id="l2">—</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-label"><span class="legend-dot" style="background:var(--purple)"></span>CRM Sync</span>
+                <span class="legend-val" id="l3">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Log de execuções recentes</span>
+        <span class="panel-sub">Supabase › tabela logs_automacoes</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Fluxo</th>
+              <th>Status</th>
+              <th>Duração</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Carregando logs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const fluxos = ['Qualif. Leads', 'Ger. Conteúdo', 'CRM Sync', 'Email Follow-up', 'Report Diário'];
+const detalhes_ok = ['Processado com sucesso', 'Lead salvo no Supabase', 'CRM atualizado', 'E-mail enviado', 'Score calculado: 87'];
+const detalhes_err = ['Timeout na API OpenAI', 'Webhook payload inválido', 'Rate limit atingido', 'Campo obrigatório ausente'];
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function timeStr(offset = 0) {
+  const d = new Date(Date.now() - offset * 60000);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('currentTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function refreshData() {
+  const total = rand(180, 340);
+  const errors = rand(2, 12);
+  const ok = total - errors;
+  const pct = ((ok / total) * 100).toFixed(1);
+  const avg = rand(420, 1800);
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statTotalSub').textContent = `↑ ${rand(5,18)}% vs ontem`;
+  document.getElementById('statOk').textContent = ok;
+  document.getElementById('statOkSub').textContent = `${pct}% taxa de sucesso`;
+  document.getElementById('statErr').textContent = errors;
+  document.getElementById('statErrSub').textContent = errors > 8 ? 'Atenção necessária' : 'Normal';
+  document.getElementById('statTime').textContent = avg;
+
+  // Alert
+  if (errors > 8) {
+    document.getElementById('alertBanner').style.display = 'flex';
+    document.getElementById('alertText').textContent = `${errors} erros nas últimas horas — verifique o fluxo "Qualif. Leads". Notificação enviada via Slack.`;
+  } else {
+    document.getElementById('alertBanner').style.display = 'none';
+  }
+
+  // Bar chart
+  const barChart = document.getElementById('barChart');
+  barChart.innerHTML = '';
+  const hours = ['18h','19h','20h','21h','22h','23h','0h','1h'];
+  const maxH = 80;
+  hours.forEach((h, i) => {
+    const execH = rand(10, 60);
+    const errH = rand(0, 3);
+    const wrap = document.createElement('div');
+    wrap.className = 'bar-wrap';
+    const barS = document.createElement('div');
+    barS.className = 'bar success';
+    barS.style.height = Math.round((execH / 60) * maxH) + 'px';
+    const barE = document.createElement('div');
+    barE.className = 'bar error';
+    barE.style.height = Math.round((errH / 60) * maxH) + 'px';
+    const lbl = document.createElement('div');
+    lbl.className = 'bar-label';
+    lbl.textContent = h;
+    wrap.appendChild(barS);
+    wrap.appendChild(barE);
+    wrap.appendChild(lbl);
+    barChart.appendChild(wrap);
+  });
+
+  // Donut
+  const v1 = rand(30, 50), v2 = rand(20, 35), v3 = rand(10, 25);
+  const tot = v1 + v2 + v3;
+  const circ = 283;
+  const a1 = (v1/tot)*circ, a2 = (v2/tot)*circ, a3 = (v3/tot)*circ;
+  document.getElementById('d1').setAttribute('stroke-dasharray', `${a1} ${circ-a1}`);
+  document.getElementById('d2').setAttribute('stroke-dasharray', `${a2} ${circ-a2}`);
+  document.getElementById('d2').setAttribute('stroke-dashoffset', -a1);
+  document.getElementById('d3').setAttribute('stroke-dasharray', `${a3} ${circ-a3}`);
+  document.getElementById('d3').setAttribute('stroke-dashoffset', -(a1+a2));
+  document.getElementById('donutCenter').textContent = tot;
+  document.getElementById('l1').textContent = v1;
+  document.getElementById('l2').textContent = v2;
+  document.getElementById('l3').textContent = v3;
+
+  // Logs
+  const tbody = document.getElementById('logBody');
+  tbody.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const isErr = Math.random() < 0.12;
+    const isWarn = !isErr && Math.random() < 0.08;
+    const fluxo = fluxos[rand(0, fluxos.length - 1)];
+    const dur = rand(280, 2400);
+    const detail = isErr
+      ? detalhes_err[rand(0, detalhes_err.length - 1)]
+      : detalhes_ok[rand(0, detalhes_ok.length - 1)];
+
+    const tr = document.createElement('tr');
+    const badge = isErr
+      ? `<span class="badge-status badge-err">● ERRO</span>`
+      : isWarn
+      ? `<span class="badge-status badge-warn">● AVISO</span>`
+      : `<span class="badge-status badge-ok">● OK</span>`;
+
+    tr.innerHTML = `
+      <td>${timeStr(i * rand(1, 8))}</td>
+      <td class="flow-name">${fluxo}</td>
+      <td>${badge}</td>
+      <td class="duration">${dur}ms</td>
+      <td style="color:var(--muted)">${detail}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+setInterval(updateClock, 1000);
+setInterval(() => { if (Math.random() < 0.3) refreshData(); }, 8000);
+refreshData();
+updateClock();
+</script>
+</body>
+</html>
